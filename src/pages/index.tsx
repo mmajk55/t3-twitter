@@ -4,6 +4,7 @@ import { SignInButton, useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import { LoadingPage, LoadingSpinner } from "~/components/loading";
 
 dayjs.extend(relativeTime);
 
@@ -69,14 +70,29 @@ const PostsView = (props: PostWithAuthor) => {
   );
 };
 
-export default function Home() {
-  const user = useUser();
-
+const Feed = () => {
   const { data, isLoading } = api.posts.getAll.useQuery();
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <LoadingPage />;
 
   if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div className="flex flex-col">
+      {[...data, ...data]?.map((fullPost) => (
+        <PostsView key={fullPost.post.id} {...fullPost} />
+      ))}
+    </div>
+  );
+};
+
+export default function Home() {
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+
+  // Fetch asap. React Query will cache the result, so it's fine to do this twice
+  api.posts.getAll.useQuery();
+
+  if (!userLoaded) return <div />;
 
   return (
     <>
@@ -88,19 +104,15 @@ export default function Home() {
       <main className="flex h-screen justify-center">
         <div className="border-sl flex-column  w-full justify-center  border-x md:max-w-2xl">
           <div className="border-b border-slate-400 p-4">
-            {!user.isSignedIn && (
+            {!isSignedIn && (
               <div className="flex justify-center">
                 <SignInButton />
               </div>
             )}
-            {user.isSignedIn && <CreatePostWizard />}
+            {isSignedIn && <CreatePostWizard />}
           </div>
           {/* display all posts */}
-          <div className="flex flex-col">
-            {[...data, ...data]?.map((fullPost) => (
-              <PostsView key={fullPost.post.id} {...fullPost} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
