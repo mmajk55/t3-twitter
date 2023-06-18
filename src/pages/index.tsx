@@ -4,12 +4,24 @@ import { SignInButton, useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
-import { LoadingPage, LoadingSpinner } from "~/components/loading";
+import { LoadingPage } from "~/components/loading";
+import { useState } from "react";
 
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
+
+  const [input, setInput] = useState("");
+
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setInput("");
+      void ctx.posts.getAll.invalidate();
+    },
+  });
 
   if (!user) return null;
 
@@ -26,9 +38,11 @@ const CreatePostWizard = () => {
         type="text"
         placeholder="type some emojis!"
         className="grow bg-transparent outline-none"
-        name=""
-        id=""
+        onChange={(e) => setInput(e.target.value)}
+        value={input}
+        disabled={isPosting}
       />
+      <button onClick={() => mutate({ content: input })}>SUBMIT</button>
     </div>
   );
 };
@@ -79,7 +93,7 @@ const Feed = () => {
 
   return (
     <div className="flex flex-col">
-      {[...data, ...data]?.map((fullPost) => (
+      {data?.map((fullPost) => (
         <PostsView key={fullPost.post.id} {...fullPost} />
       ))}
     </div>
